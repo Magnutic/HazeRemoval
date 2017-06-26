@@ -74,7 +74,8 @@ private:
 	ILuint m_image = 0;
 };
 
-ImageRgb loadRgbImage(const std::string& filename) {
+template <typename PixelT>
+BaseImage<PixelT> loadImage(const std::string& filename, ILuint IlPixelType) {
 	std::lock_guard<std::recursive_mutex> lock{ ilMutex };
 
 	initIl();
@@ -83,7 +84,7 @@ ImageRgb loadRgbImage(const std::string& filename) {
 	ilBindImage(img);
 	checkIlError();
 
-	std::cout << "Loading image '" << filename << "'.\n";
+	std::cout << "Loading image '" << filename << "'." << std::endl;
 
 	if (ilLoadImage(filename.c_str()) == IL_FALSE) {
 		throw ImageError{ "Failed to load image '" + filename + "'.\n" };
@@ -94,92 +95,59 @@ ImageRgb loadRgbImage(const std::string& filename) {
 	auto width = ILuint(ilGetInteger(IL_IMAGE_WIDTH));
 	auto height = ILuint(ilGetInteger(IL_IMAGE_HEIGHT));
 
-	std::cout << "Image dimensions: " << width << 'x' << height << ".\n";
+	std::cout << "Image dimensions: " << width << 'x' << height << '.' << std::endl;
 
 	// Read image data into new pixel buffer
-	std::vector<Pixel> buffer;
+	std::vector<PixelT> buffer;
 	buffer.resize(width * height);
-	ilCopyPixels(0u, 0u, 0u, width, height, 1u, IL_RGB, IL_FLOAT, &(buffer[0]));
+	ilCopyPixels(0u, 0u, 0u, width, height, 1u, IlPixelType, IL_FLOAT, &(buffer[0]));
 	checkIlError();
 
 	// Use new pixel buffer
-	return ImageRgb{ coord_int(width), coord_int(height), std::move(buffer) };
+	return BaseImage<PixelT>{ coord_int(width), coord_int(height), std::move(buffer) };
+}
+
+ImageRgb loadRgbImage(const std::string& filename) {
+	return loadImage<ImageRgb::PixelType>(filename, IL_RGB);
 }
 
 ImageGrey loadGreyImage(const std::string& filename) {
+	return loadImage<ImageGrey::PixelType>(filename, IL_LUMINANCE);
+}
+
+template <typename ImageT>
+void saveImage(
+	const ImageT& image, const std::string& filename, ILubyte numChannels, ILuint IlPixelType
+) {
 	std::lock_guard<std::recursive_mutex> lock{ ilMutex };
 
 	initIl();
 
+	std::cout << "Saving image to '" << filename << "'." << std::endl;
+
 	IlImageGuard img;
 	ilBindImage(img);
+
+	ilTexImage(
+		ILuint(image.width()), ILuint(image.height()), 1u,
+		numChannels, IlPixelType, IL_FLOAT,
+		(void*)(&(image.data()[0])) // Casting away const due to lack of const-correctness in DevIL API
+	);
+
 	checkIlError();
 
-	std::cout << "Loading image '" << filename << "'.\n";
-
-	if (ilLoadImage(filename.c_str()) == IL_FALSE) {
-		throw ImageError{ "Failed to load image '" + filename + "'.\n" };
-	}
-
+	ilSaveImage(filename.c_str());
 	checkIlError();
 
-	auto width = ILuint(ilGetInteger(IL_IMAGE_WIDTH));
-	auto height = ILuint(ilGetInteger(IL_IMAGE_HEIGHT));
-
-	std::cout << "Image dimensions: " << width << 'x' << height << ".\n";
-
-	// Read image data into new pixel buffer
-	std::vector<float> buffer;
-	buffer.resize(width * height);
-	ilCopyPixels(0u, 0u, 0u, width, height, 1u, IL_LUMINANCE, IL_FLOAT, &(buffer[0]));
-	checkIlError();
-
-	// Use new pixel buffer
-	return ImageGrey{ coord_int(width), coord_int(height), std::move(buffer) };
+	std::cout << "Wrote '" << filename << "'." << std::endl;
 }
 
 void saveRgbImage(const ImageRgb& image, const std::string& filename) {
-	std::lock_guard<std::recursive_mutex> lock{ ilMutex };
-
-	initIl();
-
-	std::cout << "Saving image to '" << filename << "'.\n";
-
-	IlImageGuard img;
-	ilBindImage(img);
-
-	ilTexImage(ILuint(image.width()), ILuint(image.height()), 1u, 3u, IL_RGB, IL_FLOAT,
-		(void*)(&(image.data()[0])) // Casting away const due to lack of const-correctness in DevIL API
-	);
-
-	checkIlError();
-
-	ilSaveImage(filename.c_str());
-	checkIlError();
-
-	std::cout << "Wrote '" << filename << "'.\n";
+	saveImage(image, filename, 3u, IL_RGB);
 }
 
 void saveGreyImage(const ImageGrey& image, const std::string& filename) {
-	std::lock_guard<std::recursive_mutex> lock{ ilMutex };
-
-	initIl();
-
-	std::cout << "Saving image to '" << filename << "'.\n";
-
-	IlImageGuard img;
-	ilBindImage(img);
-
-	ilTexImage(ILuint(image.width()), ILuint(image.height()), 1u, 1u, IL_LUMINANCE, IL_FLOAT,
-		(void*)(&(image.data()[0])) // Casting away const due to lack of const-correctness in DevIL API
-	);
-
-	checkIlError();
-
-	ilSaveImage(filename.c_str());
-	checkIlError();
-
-	std::cout << "Wrote '" << filename << "'.\n";
+	saveImage(image, filename, 1u, IL_LUMINANCE);
 }
 
 std::array<ImageGrey, 3> splitChannels(const ImageRgb& image) {
