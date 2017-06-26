@@ -1,7 +1,7 @@
 # Haze Removal
 
 This is an Implementation of _Fast Single-Image Haze Removal Algorithm Using Color Attenuation Prior_ [1], done as a term project for an image processing class.
-It also includes an implementation of _Guided Image Filtering_.
+It also includes an implementation of _Guided Image Filtering_ [2].
 
 Implemented in C++14, using DevIL for loading and saving images.
 
@@ -46,4 +46,7 @@ The DLL files provided with the SDK need to be either copied into the same direc
 [1] Q. Zhu, J. Mai and L. Shao, "A Fast Single Image Haze Removal Algorithm Using Color Attenuation Prior," in IEEE Transactions on Image Processing, vol. 24, no. 11, pp. 3522-3533, Nov. 2015.
 doi: 10.1109/TIP.2015.2446191
 URL: <http://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=7128396&isnumber=7131605>
+
+[2] K. He, J. Sun, X. Tang, "Guided Image Filtering", in European Conference on Computer Vision, 2010.
+URL: <http://kaiminghe.com/publications/eccv10guidedfilter.pdf>
 
